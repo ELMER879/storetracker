@@ -34,8 +34,8 @@ def sell_product(name, quantity):
         if stock < quantity:
             return "❌ Not enough stock"
 
-        new_stock = stock - quantity
         total = price * quantity
+        new_stock = stock - quantity
 
         cur.execute("UPDATE products SET stock=? WHERE name=?", (new_stock, name))
         cur.execute("INSERT INTO sales (amount) VALUES (?)", (total,))
@@ -60,7 +60,6 @@ def signup(username, password):
         cur.execute("SELECT COUNT(*) FROM users")
         user_count = cur.fetchone()[0]
 
-        # First user becomes admin
         is_admin = 1 if user_count == 0 else 0
         approved = 1 if user_count == 0 else 0
 
@@ -96,7 +95,8 @@ def is_admin(username):
     with database.get_db() as conn:
         cur = conn.cursor()
         cur.execute("SELECT is_admin FROM users WHERE username=?", (username,))
-        return cur.fetchone()[0] == 1
+        row = cur.fetchone()
+        return row and row[0] == 1
 
 
 def get_users():
