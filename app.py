@@ -32,9 +32,10 @@ def nav():
 def home():
     return f"""
     <html>
-    <head>
-        <link rel="stylesheet" href="{url_for('static', filename='style.css')}">
-    </head>
+         <head>
+             <link rel="stylesheet" href="{url_for('static', filename='style.css')}">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
     <body>
     <div class="container">
         {nav()}
@@ -50,15 +51,21 @@ def home():
 def products():
     if "username" not in session:
         return redirect("/")
+    
     rows = dictionary.get_products()
     items = "".join(
-        f"<div class='product'>{n} - ₱{p} | Stock: {s}</div>"
+        f"<div class='product'>{n} - ₱{p} | Stock: {s} "
+        f"<a href='/edit_product/{n}'>Edit</a> | "
+        f"<a href='/delete_product/{n}'>Delete</a></div>"
         for n, p, s in rows
     )
 
     return f"""
     <html>
-    <head><link rel="stylesheet" href="{url_for('static', filename='style.css')}"></head>
+        <head>
+             <link rel="stylesheet" href="{url_for('static', filename='style.css')}">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
     <body>
     <div class="container">
         {nav()}
@@ -69,6 +76,7 @@ def products():
     </body>
     </html>
     """
+
 
 
 @app.route("/add", methods=["GET", "POST"])
@@ -85,7 +93,10 @@ def add():
 
     return f"""
     <html>
-    <head><link rel="stylesheet" href="{url_for('static', filename='style.css')}"></head>
+        <head>
+            <link rel="stylesheet" href="{url_for('static', filename='style.css')}">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
     <body>
     <div class="container">
         {nav()}
@@ -118,6 +129,7 @@ def sell():
     <html>
     <head>
         <link rel="stylesheet" href="{url_for('static', filename='style.css')}">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <script>
             function searchProducts() {{
                 let query = document.getElementById('product-name').value;
@@ -173,7 +185,10 @@ def signup():
 
     return f"""
     <html>
-    <head><link rel="stylesheet" href="{url_for('static', filename='style.css')}"></head>
+        <head>
+            <link rel="stylesheet" href="{url_for('static', filename='style.css')}">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
     <body>
     <div class="container">
         {nav()}
@@ -203,7 +218,10 @@ def login():
 
     return f"""
     <html>
-    <head><link rel="stylesheet" href="{url_for('static', filename='style.css')}"></head>
+        <head>
+            <link rel="stylesheet" href="{url_for('static', filename='style.css')}">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
     <body>
     <div class="container">
         {nav()}
@@ -241,12 +259,16 @@ def admin():
         rows += f"""
         <div>{u} - {'Approved' if approved else 'Pending'}
         {"<form method='post'><input type='hidden' name='approve' value='"+u+"'><button>Approve</button></form>" if not approved else ""}
+        <a href='/delete_user/{u}'>Delete</a>
         </div>
         """
 
     return f"""
     <html>
-    <head><link rel="stylesheet" href="{url_for('static', filename='style.css')}"></head>
+        <head>
+            <link rel="stylesheet" href="{url_for('static', filename='style.css')}">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
     <body>
     <div class="container">
         {nav()}
@@ -256,6 +278,75 @@ def admin():
     </body>
     </html>
     """
+
+
+@app.route("/edit_product/<string:name>", methods=["GET", "POST"])
+def edit_product(name):
+    if "username" not in session or not dictionary.is_admin(session["username"]):
+        return redirect("/")
+
+    product = None
+    for p in dictionary.get_products():
+        if p[0] == name:
+            product = p
+            break
+
+    if not product:
+        return f"Product {name} not found."
+
+    if request.method == "POST":
+        new_price = float(request.form["price"])
+        new_stock = int(request.form["stock"])
+        dictionary.add_product(name, new_price, new_stock)
+        return redirect("/products")
+
+    return f"""
+    <html>
+        <head>
+            <link rel="stylesheet" href="{url_for('static', filename='style.css')}">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+    <body>
+    <div class="container">
+        {nav()}
+        <h2>Edit Product: {name}</h2>
+        <form method="post">
+            <input name="price" value="{product[1]}" required>
+            <input name="stock" value="{product[2]}" required>
+            <button>Save Changes</button>
+        </form>
+    </div>
+    </body>
+    </html>
+    """
+
+
+@app.route("/delete_user/<string:username>", methods=["GET"])
+def delete_user(username):
+    if "username" not in session or not dictionary.is_admin(session["username"]):
+        return redirect("/")
+
+    with database.get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM users WHERE username=?", (username,))
+        conn.commit()
+
+    return redirect("/admin")
+
+
+
+@app.route("/delete_product/<string:name>", methods=["GET"])
+def delete_product(name):
+    if "username" not in session or not dictionary.is_admin(session["username"]):
+        return redirect("/")
+
+    # Delete the product from the database
+    with database.get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM products WHERE name=?", (name,))
+        conn.commit()
+
+    return redirect("/products")
 
 
 if __name__ == "__main__":
