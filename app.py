@@ -8,41 +8,71 @@ dictionary.load_data()
 # ---------- HOME ----------
 @app.route("/")
 def home():
-    """Home page"""
-    # Auth links for not logged-in users
-    auth_links = ''
-    if "username" not in session:
-        auth_links = '<p style="text-align:center;"><a href="/signup">Sign Up</a> | <a href="/login">Login</a></p>'
-
-    # Logout link for logged-in users
-    logout_link = ''
+    """Home page showing Sign Up / Login only for first-time visitors"""
     if "username" in session:
+        # User is logged in → show main app nav and content
         logout_link = '<a href="/logout">Logout</a>'
+        
+        # Build Products display
+        products_html = ''
+        for name, info in dictionary.products.items():
+            products_html += f"""
+            <div class="product">
+                {name} - ₱{info['price']} | Stock: {info['stock']}
+            </div>
+            """
 
-    return f"""
-    <html>
-    <head>
-        <link rel="stylesheet" href="{url_for('static', filename='style.css')}">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    </head>
-    <body>
-    <div class="container">
-        <div class="nav">
-            <a href="/">Home</a>
-            <a href="/products">Products</a>
-            <a href="/add">Add</a>
-            <a href="/sell">Sell</a>
-            {logout_link}
+        return f"""
+        <html>
+        <head>
+            <link rel="stylesheet" href="{url_for('static', filename='style.css')}">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body>
+        <div class="container">
+            <div class="nav">
+                <a href="/">Home</a>
+                <a href="/products">Products</a>
+                <a href="/add">Add</a>
+                <a href="/sell">Sell</a>
+                {logout_link}
+            </div>
+            <h1>Store Tracker</h1>
+            <p style="text-align:center; color:#555;">
+                Simple stock and sales tracking system
+            </p>
+            <p style="text-align:center; font-weight:bold;">
+                Total Sales: ₱{dictionary.total_sales}
+            </p>
+            {products_html}
         </div>
-        <h1>Store Tracker</h1>
-        <p style="text-align:center; color:#555;">
-            Simple stock and sales tracking system
-        </p>
-        {auth_links}
-    </div>
-    </body>
-    </html>
-    """
+        </body>
+        </html>
+        """
+    else:
+        # Not logged in → show only Sign Up / Login
+        auth_links = '<p style="text-align:center;"><a href="/signup">Sign Up</a> | <a href="/login">Login</a></p>'
+        return f"""
+        <html>
+        <head>
+            <link rel="stylesheet" href="{url_for('static', filename='style.css')}">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body>
+        <div class="container">
+            <div class="nav">
+                <a href="/">Home</a>
+            </div>
+            <h1>Welcome to Store Tracker</h1>
+            <p style="text-align:center; color:#555;">
+                Please Sign Up or Login to access the store.
+            </p>
+            {auth_links}
+        </div>
+        </body>
+        </html>
+        """
+
 
 # ---------- VIEW PRODUCTS ----------
 @app.route("/products")
