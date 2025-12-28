@@ -1,12 +1,13 @@
-from flask import Flask, request, url_for
+from flask import Flask, request, url_for, redirect
 import dictionary
 
 app = Flask(__name__)
-dictionary.load_data()  # load saved data on startup
+dictionary.load_data()  # Load saved data on startup
 
 # ---------- HOME ----------
 @app.route("/")
 def home():
+    """Home page of the store"""
     return f"""
     <html>
     <head>
@@ -15,6 +16,7 @@ def home():
     </head>
     <body>
     <div class="container">
+        <!-- Navigation (only main app links) -->
         <div class="nav">
             <a href="/">Home</a>
             <a href="/products">Products</a>
@@ -30,16 +32,16 @@ def home():
     </html>
     """
 
-# ---------- PRODUCTS ----------
+# ---------- VIEW PRODUCTS ----------
 @app.route("/products")
 def view_products():
+    """Show all products with total sales"""
     html = f"""
     <html>
     <head>
-    <link rel="stylesheet" href="{url_for('static', filename='style.css')}">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-
+        <link rel="stylesheet" href="{url_for('static', filename='style.css')}">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
     <body>
     <div class="container">
         <div class="nav">
@@ -69,20 +71,20 @@ def view_products():
 # ---------- ADD PRODUCT ----------
 @app.route("/add", methods=["GET", "POST"])
 def add():
+    """Add a new product"""
     if request.method == "POST":
         dictionary.add_product(
             request.form["name"],
             float(request.form["price"]),
             int(request.form["stock"])
         )
-        return "✅ Product added!"
+        return redirect("/products")  # redirect to products after adding
     return f"""
     <html>
     <head>
-    <link rel="stylesheet" href="{url_for('static', filename='style.css')}">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-
+        <link rel="stylesheet" href="{url_for('static', filename='style.css')}">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
     <body>
     <div class="container">
         <div class="nav">
@@ -106,11 +108,13 @@ def add():
 # ---------- SELL PRODUCT ----------
 @app.route("/sell", methods=["GET", "POST"])
 def sell():
+    """Sell a product"""
     if request.method == "POST":
-        return dictionary.sell_product(
+        dictionary.sell_product(
             request.form["name"],
             int(request.form["quantity"])
         )
+        return redirect("/products")  # redirect to products after selling
     return f"""
     <html>
     <head>
@@ -136,6 +140,70 @@ def sell():
     </html>
     """
 
+# ---------- SIGN UP ----------
+@app.route("/signup", methods=["GET", "POST"])
+def signup():
+    """User registration page (separate, not in main nav)"""
+    if request.method == "POST":
+        username = request.form["username"]
+        password = request.form["password"]
+        message = dictionary.signup(username, password)
+        if message.startswith("✅"):
+            return redirect("/")  # redirect to main app after signup
+        else:
+            return message
+    return f"""
+    <html>
+    <head>
+        <link rel="stylesheet" href="{url_for('static', filename='style.css')}">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body>
+        <div class="container">
+            <h2>Sign Up</h2>
+            <form method="post">
+                <input name="username" placeholder="Username" required>
+                <input name="password" type="password" placeholder="Password" required>
+                <button>Sign Up</button>
+            </form>
+            <p>Already have an account? <a href="/login">Login</a></p>
+        </div>
+    </body>
+    </html>
+    """
+
+# ---------- LOGIN ----------
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    """User login page (separate, not in main nav)"""
+    if request.method == "POST":
+        username = request.form["username"]
+        password = request.form["password"]
+        message = dictionary.login(username, password)
+        if message.startswith("✅"):
+            return redirect("/")  # redirect to main app after login
+        else:
+            return message
+    return f"""
+    <html>
+    <head>
+        <link rel="stylesheet" href="{url_for('static', filename='style.css')}">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body>
+        <div class="container">
+            <h2>Login</h2>
+            <form method="post">
+                <input name="username" placeholder="Username" required>
+                <input name="password" type="password" placeholder="Password" required>
+                <button>Login</button>
+            </form>
+            <p>Don't have an account? <a href="/signup">Sign Up</a></p>
+        </div>
+    </body>
+    </html>
+    """
+
 if __name__ == "__main__":
-    # Host 0.0.0.0 so cloud can access it
+    # Cloud-ready: accessible externally
     app.run(host="0.0.0.0", port=5000)
