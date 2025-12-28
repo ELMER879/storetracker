@@ -91,9 +91,10 @@ def add():
         {nav()}
         <h2>Add Product</h2>
         <form method="post">
-            <input name="name" required>
-            <input name="price" required>
-            <input name="stock" required>
+            <input name="name" placeholder="Enter product name" required>
+            <input name="price" placeholder="Enter price (e.g. 100)" type="number" required>
+            <input name="stock" placeholder="Enter stock quantity" type="number" required>
+
             <button>Add</button>
         </form>
     </div>
@@ -115,20 +116,51 @@ def sell():
 
     return f"""
     <html>
-    <head><link rel="stylesheet" href="{url_for('static', filename='style.css')}"></head>
+    <head>
+        <link rel="stylesheet" href="{url_for('static', filename='style.css')}">
+        <script>
+            function searchProducts() {{
+                let query = document.getElementById('product-name').value;
+                fetch('/search_products?query=' + query)
+                    .then(response => response.json())
+                    .then(data => {{
+                        let productList = document.getElementById('product-list');
+                        productList.innerHTML = '';
+                        data.products.forEach(product => {{
+                            let li = document.createElement('li');
+                            li.textContent = product;
+                            li.onclick = function() {{
+                                document.getElementById('product-name').value = product;
+                                productList.innerHTML = '';
+                            }};
+                            productList.appendChild(li);
+                        }});
+                    }});
+            }}
+        </script>
+    </head>
     <body>
     <div class="container">
         {nav()}
         <h2>Sell Product</h2>
         <form method="post">
-            <input name="name" required>
-            <input name="quantity" type="number" required>
+            <input id="product-name" name="name" placeholder="Enter product name to sell" oninput="searchProducts()" required>
+            <ul id="product-list" style="border: 1px solid #ddd; max-height: 200px; overflow-y: auto; padding: 0;"></ul>
+            <input name="quantity" placeholder="Enter quantity to sell" type="number" required>
             <button>Sell</button>
         </form>
     </div>
     </body>
     </html>
     """
+
+
+@app.route("/search_products", methods=["GET"])
+def search_products():
+    query = request.args.get('query', '')
+    products = [p[0] for p in dictionary.get_products() if query.lower() in p[0].lower()]
+    return {"products": products}
+
 
 
 @app.route("/signup", methods=["GET", "POST"])

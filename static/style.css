@@ -125,3 +125,13 @@ form button {
         font-size: 16px;
     }
 }
+
+
+#product-list li {
+    padding: 8px;
+    cursor: pointer;
+}
+
+#product-list li:hover {
+    background-color: #f0f0f0;
+}
