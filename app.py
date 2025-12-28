@@ -4,6 +4,7 @@ import dictionary
 app = Flask(__name__)
 dictionary.load_data()  # load saved data on startup
 
+# ---------- HOME ----------
 @app.route("/")
 def home():
     return f"""
@@ -15,6 +16,7 @@ def home():
     <body>
     <div class="container">
         <div class="nav">
+            <a href="/">Home</a>
             <a href="/products">Products</a>
             <a href="/add">Add</a>
             <a href="/sell">Sell</a>
@@ -28,6 +30,7 @@ def home():
     </html>
     """
 
+# ---------- PRODUCTS ----------
 @app.route("/products")
 def view_products():
     html = f"""
@@ -38,6 +41,7 @@ def view_products():
     <body>
     <div class="container">
         <div class="nav">
+            <a href="/">Home</a>
             <a href="/products">Products</a>
             <a href="/add">Add</a>
             <a href="/sell">Sell</a>
@@ -47,14 +51,12 @@ def view_products():
         </p>
         <h2>Products</h2>
     """
-
     for name, info in dictionary.products.items():
         html += f"""
         <div class="product">
             {name} - ₱{info['price']} | Stock: {info['stock']}
         </div>
         """
-
     html += """
     </div>
     </body>
@@ -62,6 +64,7 @@ def view_products():
     """
     return html
 
+# ---------- ADD PRODUCT ----------
 @app.route("/add", methods=["GET", "POST"])
 def add():
     if request.method == "POST":
@@ -70,8 +73,7 @@ def add():
             float(request.form["price"]),
             int(request.form["stock"])
         )
-        return "Product added!"
-
+        return "✅ Product added!"
     return f"""
     <html>
     <head>
@@ -80,6 +82,7 @@ def add():
     <body>
     <div class="container">
         <div class="nav">
+            <a href="/">Home</a>
             <a href="/products">Products</a>
             <a href="/add">Add</a>
             <a href="/sell">Sell</a>
@@ -96,6 +99,7 @@ def add():
     </html>
     """
 
+# ---------- SELL PRODUCT ----------
 @app.route("/sell", methods=["GET", "POST"])
 def sell():
     if request.method == "POST":
@@ -103,7 +107,6 @@ def sell():
             request.form["name"],
             int(request.form["quantity"])
         )
-
     return f"""
     <html>
     <head>
@@ -113,6 +116,7 @@ def sell():
     <body>
     <div class="container">
         <div class="nav">
+            <a href="/">Home</a>
             <a href="/products">Products</a>
             <a href="/add">Add</a>
             <a href="/sell">Sell</a>
@@ -129,4 +133,5 @@ def sell():
     """
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    # Host 0.0.0.0 so cloud can access it
+    app.run(host="0.0.0.0", port=5000)
