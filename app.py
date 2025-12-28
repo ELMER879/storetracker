@@ -2,19 +2,39 @@ from flask import Flask, request, url_for, redirect, session
 import dictionary
 
 app = Flask(__name__)
-app.secret_key = "supersecretkey"  # Needed for sessions
+app.secret_key = "supersecretkey"
 dictionary.load_data()
+
+
+# ---------- NAVIGATION GENERATOR ----------
+def generate_nav():
+    if "username" in session:
+        # logged-in user
+        nav = f"""
+        <a href="/">Home</a>
+        <a href="/products">Products</a>
+        <a href="/add">Add</a>
+        <a href="/sell">Sell</a>
+        """
+        if dictionary.users[session['username']].get("is_admin", False):
+            nav += "<a href='/admin'>Admin</a>"
+        nav += "<a href='/logout'>Logout</a>"
+    else:
+        # guest
+        nav = """
+        <a href="/">Home</a>
+        <a href="/signup">Sign Up</a>
+        <a href="/login">Login</a>
+        """
+    return f'<div class="nav">{nav}</div>'
+
 
 # ---------- HOME ----------
 @app.route("/")
 def home():
-    """Home page: shows Sign Up/Login if not logged in, full app if logged in"""
+    nav_html = generate_nav()
     if "username" in session:
-        logout_link = '<a href="/logout">Logout</a>'
-        products_html = ''
-        for name, info in dictionary.products.items():
-            products_html += f"<div class='product'>{name} - ₱{info['price']} | Stock: {info['stock']}</div>"
-
+        username = session["username"]
         return f"""
         <html>
         <head>
@@ -23,37 +43,14 @@ def home():
         </head>
         <body>
         <div class="container">
-            <div class="nav">
-                <a href="/">Home</a>
-                <a href="/products">Products</a>
-                <a href="/add">Add</a>
-                <a href="/sell">Sell</a>
-                {logout_link}
-                {"<a href='/admin'>Admin</a>" if dictionary.users[session['username']].get('is_admin') else ""}
-            </div>
-            <h1>Store Tracker</h1>
-            <p style="text-align:center; color:#555;">Simple stock and sales tracking system</p>
-            <p style="text-align:center; font-weight:bold;">Total Sales: ₱{dictionary.total_sales}</p>
-            {products_html}
-            <h2>Add Product</h2>
-            <form method="post" action="/add">
-                <input name="name" placeholder="Product name" required>
-                <input name="price" placeholder="Price" required>
-                <input name="stock" placeholder="Stock" required>
-                <button>Add Product</button>
-            </form>
-            <h2>Sell Product</h2>
-            <form method="post" action="/sell">
-                <input name="name" placeholder="Product name" required>
-                <input name="quantity" type="number" placeholder="Quantity" required>
-                <button>Sell Product</button>
-            </form>
+            {nav_html}
+            <h1>Welcome, {username}!</h1>
+            <p style="text-align:center; color:#555;">Use the navigation to view products, add or sell items.</p>
         </div>
         </body>
         </html>
         """
     else:
-        auth_links = '<p style="text-align:center;"><a href="/signup">Sign Up</a> | <a href="/login">Login</a></p>'
         return f"""
         <html>
         <head>
@@ -62,41 +59,112 @@ def home():
         </head>
         <body>
         <div class="container">
-            <div class="nav"><a href="/">Home</a></div>
+            {nav_html}
             <h1>Welcome to Store Tracker</h1>
             <p style="text-align:center; color:#555;">Please Sign Up or Login to access the store.</p>
-            {auth_links}
         </div>
         </body>
         </html>
         """
 
-# ---------- ADD PRODUCT ----------
-@app.route("/add", methods=["POST"])
-def add():
+
+# ---------- PRODUCTS ----------
+@app.route("/products")
+def products_page():
     if "username" not in session:
         return redirect("/")
-    dictionary.add_product(
-        request.form["name"],
-        float(request.form["price"]),
-        int(request.form["stock"])
-    )
-    return redirect("/")
+    nav_html = generate_nav()
+    products_html = ""
+    for name, info in dictionary.products.items():
+        products_html += f"<div class='product'>{name} - ₱{info['price']} | Stock: {info['stock']}</div>"
+
+    return f"""
+    <html>
+    <head>
+        <link rel="stylesheet" href="{url_for('static', filename='style.css')}">
+    </head>
+    <body>
+        <div class="container">
+            {nav_html}
+            <h2>Products</h2>
+            {products_html}
+            <p style="text-align:center; font-weight:bold;">Total Sales: ₱{dictionary.total_sales}</p>
+        </div>
+    </body>
+    </html>
+    """
+
+
+# ---------- ADD PRODUCT ----------
+@app.route("/add", methods=["GET", "POST"])
+def add_page():
+    if "username" not in session:
+        return redirect("/")
+    nav_html = generate_nav()
+    if request.method == "POST":
+        dictionary.add_product(
+            request.form["name"],
+            float(request.form["price"]),
+            int(request.form["stock"])
+        )
+        return redirect("/products")
+    return f"""
+    <html>
+    <head>
+        <link rel="stylesheet" href="{url_for('static', filename='style.css')}">
+    </head>
+    <body>
+        <div class="container">
+            {nav_html}
+            <h2>Add Product</h2>
+            <form method="post">
+                <input name="name" placeholder="Product name" required>
+                <input name="price" placeholder="Price" required>
+                <input name="stock" placeholder="Stock" required>
+                <button>Add Product</button>
+            </form>
+        </div>
+    </body>
+    </html>
+    """
+
 
 # ---------- SELL PRODUCT ----------
-@app.route("/sell", methods=["POST"])
-def sell():
+@app.route("/sell", methods=["GET", "POST"])
+def sell_page():
     if "username" not in session:
         return redirect("/")
-    dictionary.sell_product(
-        request.form["name"],
-        int(request.form["quantity"])
-    )
-    return redirect("/")
+    nav_html = generate_nav()
+    if request.method == "POST":
+        dictionary.sell_product(
+            request.form["name"],
+            int(request.form["quantity"])
+        )
+        return redirect("/products")
+    return f"""
+    <html>
+    <head>
+        <link rel="stylesheet" href="{url_for('static', filename='style.css')}">
+    </head>
+    <body>
+        <div class="container">
+            {nav_html}
+            <h2>Sell Product</h2>
+            <form method="post">
+                <input name="name" placeholder="Product name" required>
+                <input name="quantity" type="number" placeholder="Quantity" required>
+                <button>Sell Product</button>
+            </form>
+        </div>
+    </body>
+    </html>
+    """
 
-# ---------- SIGN UP ----------
+
+# ---------- SIGNUP ----------
 @app.route("/signup", methods=["GET", "POST"])
-def signup():
+def signup_page():
+    nav_html = generate_nav()
     if request.method == "POST":
         username = request.form["username"]
         password = request.form["password"]
@@ -109,6 +177,7 @@ def signup():
     </head>
     <body>
         <div class="container">
+            {nav_html}
             <h2>Sign Up</h2>
             <form method="post">
                 <input name="username" placeholder="Username" required>
@@ -121,9 +190,11 @@ def signup():
     </html>
     """
 
+
 # ---------- LOGIN ----------
 @app.route("/login", methods=["GET", "POST"])
-def login():
+def login_page():
+    nav_html = generate_nav()
     if request.method == "POST":
         username = request.form["username"]
         password = request.form["password"]
@@ -140,6 +211,7 @@ def login():
     </head>
     <body>
         <div class="container">
+            {nav_html}
             <h2>Login</h2>
             <form method="post">
                 <input name="username" placeholder="Username" required>
@@ -152,11 +224,13 @@ def login():
     </html>
     """
 
+
 # ---------- LOGOUT ----------
 @app.route("/logout")
 def logout():
     session.pop("username", None)
     return redirect("/")
+
 
 # ---------- ADMIN PANEL ----------
 @app.route("/admin", methods=["GET", "POST"])
@@ -166,6 +240,7 @@ def admin_page():
     current_user = session["username"]
     if not dictionary.users.get(current_user, {}).get("is_admin", False):
         return "❌ Access denied"
+    nav_html = generate_nav()
 
     # Approve users
     if request.method == "POST":
@@ -194,14 +269,15 @@ def admin_page():
     </head>
     <body>
         <div class="container">
+            {nav_html}
             <h2>Admin Panel - Approve Users</h2>
             <p>Logged in as admin: {current_user}</p>
             {users_html}
-            <p><a href='/logout'>Logout</a></p>
         </div>
     </body>
     </html>
     """
 
+
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    app.run(host="0.0.0.0", port=5000, debug=True)
