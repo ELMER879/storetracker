@@ -6,7 +6,6 @@ database.init_db()
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
-dictionary.load_data()
 
 
 # ---------- NAVIGATION GENERATOR ----------
