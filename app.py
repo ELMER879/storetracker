@@ -1,13 +1,24 @@
-from flask import Flask, request, url_for, redirect
+from flask import Flask, request, url_for, redirect, session
 import dictionary
 
 app = Flask(__name__)
-dictionary.load_data()  # Load saved data on startup
+app.secret_key = "supersecretkey"  # Needed for session management
+dictionary.load_data()
 
 # ---------- HOME ----------
 @app.route("/")
 def home():
-    """Home page of the store"""
+    """Home page"""
+    # Auth links for not logged-in users
+    auth_links = ''
+    if "username" not in session:
+        auth_links = '<p style="text-align:center;"><a href="/signup">Sign Up</a> | <a href="/login">Login</a></p>'
+
+    # Logout link for logged-in users
+    logout_link = ''
+    if "username" in session:
+        logout_link = '<a href="/logout">Logout</a>'
+
     return f"""
     <html>
     <head>
@@ -16,17 +27,18 @@ def home():
     </head>
     <body>
     <div class="container">
-        <!-- Navigation (only main app links) -->
         <div class="nav">
             <a href="/">Home</a>
             <a href="/products">Products</a>
             <a href="/add">Add</a>
             <a href="/sell">Sell</a>
+            {logout_link}
         </div>
         <h1>Store Tracker</h1>
         <p style="text-align:center; color:#555;">
             Simple stock and sales tracking system
         </p>
+        {auth_links}
     </div>
     </body>
     </html>
@@ -36,6 +48,10 @@ def home():
 @app.route("/products")
 def view_products():
     """Show all products with total sales"""
+    logout_link = ''
+    if "username" in session:
+        logout_link = '<a href="/logout">Logout</a>'
+
     html = f"""
     <html>
     <head>
@@ -49,6 +65,7 @@ def view_products():
             <a href="/products">Products</a>
             <a href="/add">Add</a>
             <a href="/sell">Sell</a>
+            {logout_link}
         </div>
         <p style="text-align:center; font-weight:bold;">
             Total Sales: ₱{dictionary.total_sales}
@@ -72,13 +89,18 @@ def view_products():
 @app.route("/add", methods=["GET", "POST"])
 def add():
     """Add a new product"""
+    logout_link = ''
+    if "username" in session:
+        logout_link = '<a href="/logout">Logout</a>'
+
     if request.method == "POST":
         dictionary.add_product(
             request.form["name"],
             float(request.form["price"]),
             int(request.form["stock"])
         )
-        return redirect("/products")  # redirect to products after adding
+        return redirect("/products")
+    
     return f"""
     <html>
     <head>
@@ -92,6 +114,7 @@ def add():
             <a href="/products">Products</a>
             <a href="/add">Add</a>
             <a href="/sell">Sell</a>
+            {logout_link}
         </div>
         <h2>Add Product</h2>
         <form method="post">
@@ -109,12 +132,17 @@ def add():
 @app.route("/sell", methods=["GET", "POST"])
 def sell():
     """Sell a product"""
+    logout_link = ''
+    if "username" in session:
+        logout_link = '<a href="/logout">Logout</a>'
+
     if request.method == "POST":
         dictionary.sell_product(
             request.form["name"],
             int(request.form["quantity"])
         )
-        return redirect("/products")  # redirect to products after selling
+        return redirect("/products")
+    
     return f"""
     <html>
     <head>
@@ -128,6 +156,7 @@ def sell():
             <a href="/products">Products</a>
             <a href="/add">Add</a>
             <a href="/sell">Sell</a>
+            {logout_link}
         </div>
         <h2>Sell Product</h2>
         <form method="post">
@@ -143,12 +172,13 @@ def sell():
 # ---------- SIGN UP ----------
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
-    """User registration page (separate, not in main nav)"""
+    """Sign up page (separate, not in main nav)"""
     if request.method == "POST":
         username = request.form["username"]
         password = request.form["password"]
         message = dictionary.signup(username, password)
         if message.startswith("✅"):
+            session["username"] = username
             return redirect("/")  # redirect to main app after signup
         else:
             return message
@@ -175,12 +205,13 @@ def signup():
 # ---------- LOGIN ----------
 @app.route("/login", methods=["GET", "POST"])
 def login():
-    """User login page (separate, not in main nav)"""
+    """Login page (separate, not in main nav)"""
     if request.method == "POST":
         username = request.form["username"]
         password = request.form["password"]
         message = dictionary.login(username, password)
         if message.startswith("✅"):
+            session["username"] = username
             return redirect("/")  # redirect to main app after login
         else:
             return message
@@ -204,6 +235,13 @@ def login():
     </html>
     """
 
+# ---------- LOGOUT ----------
+@app.route("/logout")
+def logout():
+    """Log the user out"""
+    session.pop("username", None)
+    return redirect("/")
+    
 if __name__ == "__main__":
-    # Cloud-ready: accessible externally
+    # Cloud-ready
     app.run(host="0.0.0.0", port=5000)
