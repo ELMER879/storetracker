@@ -81,8 +81,9 @@ def products_page():
     return f"""
     <html>
     <head>
-        <link rel="stylesheet" href="{url_for('static', filename='style.css')}">
-    </head>
+            <link rel="stylesheet" href="{url_for('static', filename='style.css')}">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
     <body>
         <div class="container">
             {nav_html}
@@ -111,8 +112,9 @@ def add_page():
     return f"""
     <html>
     <head>
-        <link rel="stylesheet" href="{url_for('static', filename='style.css')}">
-    </head>
+            <link rel="stylesheet" href="{url_for('static', filename='style.css')}">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
     <body>
         <div class="container">
             {nav_html}
@@ -143,9 +145,10 @@ def sell_page():
         return redirect("/products")
     return f"""
     <html>
-    <head>
-        <link rel="stylesheet" href="{url_for('static', filename='style.css')}">
-    </head>
+         <head>
+            <link rel="stylesheet" href="{url_for('static', filename='style.css')}">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
     <body>
         <div class="container">
             {nav_html}
@@ -172,9 +175,10 @@ def signup_page():
         return message
     return f"""
     <html>
-    <head>
-        <link rel="stylesheet" href="{url_for('static', filename='style.css')}">
-    </head>
+        <head>
+            <link rel="stylesheet" href="{url_for('static', filename='style.css')}">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
     <body>
         <div class="container">
             {nav_html}
@@ -206,9 +210,10 @@ def login_page():
             return message
     return f"""
     <html>
-    <head>
-        <link rel="stylesheet" href="{url_for('static', filename='style.css')}">
-    </head>
+        <head>
+            <link rel="stylesheet" href="{url_for('static', filename='style.css')}">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
     <body>
         <div class="container">
             {nav_html}
@@ -264,9 +269,10 @@ def admin_page():
 
     return f"""
     <html>
-    <head>
-        <link rel="stylesheet" href="{url_for('static', filename='style.css')}">
-    </head>
+        <head>
+            <link rel="stylesheet" href="{url_for('static', filename='style.css')}">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
     <body>
         <div class="container">
             {nav_html}
