@@ -11,10 +11,10 @@ products = {
 }
 total_sales = 0
 
-# Users: username -> { "password": "...", "approved": True/False }
+# Users: username -> { "password": "...", "approved": True/False, "is_admin": True/False }
 users = {}
 
-# ---------- SAVE & LOAD DATA ----------
+# ---------- SAVE & LOAD ----------
 def save_data():
     data = {
         "products": products,
@@ -57,12 +57,20 @@ def low_stock(limit=5):
 
 # ---------- USER AUTH ----------
 def signup(username, password):
-    """Sign up a new user (needs admin approval)"""
+    """Sign up a new user. First user becomes admin automatically."""
+    global users
     if username in users:
         return "❌ Username already exists"
-    users[username] = {"password": password, "approved": False}  # Not approved yet
-    save_data()
-    return "✅ Signup submitted! Wait for approval."
+    if len(users) == 0:
+        # First user -> auto admin
+        users[username] = {"password": password, "approved": True, "is_admin": True}
+        save_data()
+        return "✅ Signup successful! You are the admin."
+    else:
+        # Normal user -> unapproved
+        users[username] = {"password": password, "approved": False, "is_admin": False}
+        save_data()
+        return "✅ Signup submitted! Wait for admin approval."
 
 def login(username, password):
     """Login existing user (only approved)"""

@@ -10,11 +10,11 @@ dictionary.load_data()
 def home():
     """Home page: shows Sign Up/Login if not logged in, full app if logged in"""
     if "username" in session:
-        # Logged-in user
         logout_link = '<a href="/logout">Logout</a>'
         products_html = ''
         for name, info in dictionary.products.items():
             products_html += f"<div class='product'>{name} - ₱{info['price']} | Stock: {info['stock']}</div>"
+
         return f"""
         <html>
         <head>
@@ -29,17 +29,30 @@ def home():
                 <a href="/add">Add</a>
                 <a href="/sell">Sell</a>
                 {logout_link}
+                {"<a href='/admin'>Admin</a>" if dictionary.users[session['username']].get('is_admin') else ""}
             </div>
             <h1>Store Tracker</h1>
             <p style="text-align:center; color:#555;">Simple stock and sales tracking system</p>
             <p style="text-align:center; font-weight:bold;">Total Sales: ₱{dictionary.total_sales}</p>
             {products_html}
+            <h2>Add Product</h2>
+            <form method="post" action="/add">
+                <input name="name" placeholder="Product name" required>
+                <input name="price" placeholder="Price" required>
+                <input name="stock" placeholder="Stock" required>
+                <button>Add Product</button>
+            </form>
+            <h2>Sell Product</h2>
+            <form method="post" action="/sell">
+                <input name="name" placeholder="Product name" required>
+                <input name="quantity" type="number" placeholder="Quantity" required>
+                <button>Sell Product</button>
+            </form>
         </div>
         </body>
         </html>
         """
     else:
-        # Guest / not logged in
         auth_links = '<p style="text-align:center;"><a href="/signup">Sign Up</a> | <a href="/login">Login</a></p>'
         return f"""
         <html>
@@ -93,7 +106,6 @@ def signup():
     <html>
     <head>
         <link rel="stylesheet" href="{url_for('static', filename='style.css')}">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
     </head>
     <body>
         <div class="container">
@@ -125,7 +137,6 @@ def login():
     <html>
     <head>
         <link rel="stylesheet" href="{url_for('static', filename='style.css')}">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
     </head>
     <body>
         <div class="container">
@@ -150,20 +161,22 @@ def logout():
 # ---------- ADMIN PANEL ----------
 @app.route("/admin", methods=["GET", "POST"])
 def admin_page():
-    if "username" not in session or session["username"] != "admin":
+    if "username" not in session:
+        return "❌ Access denied"
+    current_user = session["username"]
+    if not dictionary.users.get(current_user, {}).get("is_admin", False):
         return "❌ Access denied"
 
-    # Approve users via POST
+    # Approve users
     if request.method == "POST":
         approve_user = request.form["approve"]
         if approve_user in dictionary.users:
             dictionary.users[approve_user]["approved"] = True
             dictionary.save_data()
 
-    # Display users
     users_html = ""
     for username, info in dictionary.users.items():
-        if username == "admin":
+        if info.get("is_admin"):
             continue
         status = "✅ Approved" if info["approved"] else "❌ Pending"
         approve_button = "" if info["approved"] else f"""
@@ -178,12 +191,11 @@ def admin_page():
     <html>
     <head>
         <link rel="stylesheet" href="{url_for('static', filename='style.css')}">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
     </head>
     <body>
         <div class="container">
             <h2>Admin Panel - Approve Users</h2>
-            <p>Logged in as admin</p>
+            <p>Logged in as admin: {current_user}</p>
             {users_html}
             <p><a href='/logout'>Logout</a></p>
         </div>
