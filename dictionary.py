@@ -1,83 +1,113 @@
-import json
-import os
+import database
 
-DATA_FILE = "data.json"
 
-# ---------- DEFAULT DATA ----------
-products = {
-    "Milk Tea": {"price": 120, "stock": 50},
-    "Burger": {"price": 80, "stock": 30},
-    "Fries": {"price": 50, "stock": 40}
-}
-total_sales = 0
+# ---------- PRODUCTS ----------
+def get_products():
+    with database.get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT name, price, stock FROM products")
+        return cur.fetchall()
 
-# Users: username -> { "password": "...", "approved": True/False, "is_admin": True/False }
-users = {}
 
-# ---------- SAVE & LOAD ----------
-def save_data():
-    data = {
-        "products": products,
-        "total_sales": total_sales,
-        "users": users
-    }
-    with open(DATA_FILE, "w") as file:
-        json.dump(data, file)
-
-def load_data():
-    global products, total_sales, users
-    if not os.path.exists(DATA_FILE):
-        save_data()
-        return
-    with open(DATA_FILE, "r") as file:
-        data = json.load(file)
-        products = data.get("products", {})
-        total_sales = data.get("total_sales", 0)
-        users = data.get("users", {})
-
-# ---------- PRODUCT LOGIC ----------
 def add_product(name, price, stock):
-    products[name] = {"price": price, "stock": stock}
-    save_data()
+    with database.get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("""
+        INSERT OR REPLACE INTO products (name, price, stock)
+        VALUES (?, ?, ?)
+        """, (name, price, stock))
+        conn.commit()
+
 
 def sell_product(name, quantity):
-    global total_sales
-    if name not in products:
-        return "❌ Product not found"
-    if products[name]["stock"] < quantity:
-        return "❌ Not enough stock"
-    products[name]["stock"] -= quantity
-    sale_amount = products[name]["price"] * quantity
-    total_sales += sale_amount
-    save_data()
-    return f"✅ Sale complete! Total: ₱{sale_amount}"
+    with database.get_db() as conn:
+        cur = conn.cursor()
 
-def low_stock(limit=5):
-    return [name for name, info in products.items() if info["stock"] <= limit]
+        cur.execute("SELECT price, stock FROM products WHERE name=?", (name,))
+        product = cur.fetchone()
 
-# ---------- USER AUTH ----------
+        if not product:
+            return "❌ Product not found"
+
+        price, stock = product
+
+        if stock < quantity:
+            return "❌ Not enough stock"
+
+        new_stock = stock - quantity
+        total = price * quantity
+
+        cur.execute("UPDATE products SET stock=? WHERE name=?", (new_stock, name))
+        cur.execute("INSERT INTO sales (amount) VALUES (?)", (total,))
+        conn.commit()
+
+        return f"✅ Sale successful! Total: ₱{total}"
+
+
+def total_sales():
+    with database.get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT SUM(amount) FROM sales")
+        result = cur.fetchone()[0]
+        return result if result else 0
+
+
+# ---------- USERS ----------
 def signup(username, password):
-    """Sign up a new user. First user becomes admin automatically."""
-    global users
-    if username in users:
-        return "❌ Username already exists"
-    if len(users) == 0:
-        # First user -> auto admin
-        users[username] = {"password": password, "approved": True, "is_admin": True}
-        save_data()
-        return "✅ Signup successful! You are the admin."
-    else:
-        # Normal user -> unapproved
-        users[username] = {"password": password, "approved": False, "is_admin": False}
-        save_data()
-        return "✅ Signup submitted! Wait for admin approval."
+    with database.get_db() as conn:
+        cur = conn.cursor()
+
+        cur.execute("SELECT COUNT(*) FROM users")
+        user_count = cur.fetchone()[0]
+
+        # First user becomes admin
+        is_admin = 1 if user_count == 0 else 0
+        approved = 1 if user_count == 0 else 0
+
+        try:
+            cur.execute("""
+            INSERT INTO users (username, password, approved, is_admin)
+            VALUES (?, ?, ?, ?)
+            """, (username, password, approved, is_admin))
+            conn.commit()
+        except:
+            return "❌ Username already exists"
+
+        return "✅ Signup successful! You are admin." if is_admin else "✅ Signup submitted for approval"
+
 
 def login(username, password):
-    """Login existing user (only approved)"""
-    if username not in users:
-        return "❌ Username not found"
-    if users[username]["password"] != password:
-        return "❌ Incorrect password"
-    if not users[username]["approved"]:
-        return "❌ Your account is not approved yet"
-    return "✅ Login successful!"
+    with database.get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("""
+        SELECT approved FROM users
+        WHERE username=? AND password=?
+        """, (username, password))
+        user = cur.fetchone()
+
+        if not user:
+            return "❌ Invalid login"
+        if user[0] == 0:
+            return "❌ Not approved yet"
+        return "✅ Login successful"
+
+
+def is_admin(username):
+    with database.get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT is_admin FROM users WHERE username=?", (username,))
+        return cur.fetchone()[0] == 1
+
+
+def get_users():
+    with database.get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT username, approved, is_admin FROM users")
+        return cur.fetchall()
+
+
+def approve_user(username):
+    with database.get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("UPDATE users SET approved=1 WHERE username=?", (username,))
+        conn.commit()

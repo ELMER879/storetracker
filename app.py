@@ -1,5 +1,8 @@
 from flask import Flask, request, url_for, redirect, session
 import dictionary
+import database
+database.init_db()
+
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
@@ -75,7 +78,7 @@ def products_page():
         return redirect("/")
     nav_html = generate_nav()
     products_html = ""
-    for name, info in dictionary.products.items():
+    for name, info in dictionary.get.products.items():
         products_html += f"<div class='product'>{name} - ₱{info['price']} | Stock: {info['stock']}</div>"
 
     return f"""
@@ -243,7 +246,7 @@ def admin_page():
     if "username" not in session:
         return "❌ Access denied"
     current_user = session["username"]
-    if not dictionary.users.get(current_user, {}).get("is_admin", False):
+    if not dictionary.get.users.get(current_user, {}).get("is_admin", False):
         return "❌ Access denied"
     nav_html = generate_nav()
 
@@ -251,7 +254,7 @@ def admin_page():
     if request.method == "POST":
         approve_user = request.form["approve"]
         if approve_user in dictionary.users:
-            dictionary.users[approve_user]["approved"] = True
+            dictionary.get.users[approve_user]["approved"] = True
             dictionary.save_data()
 
     users_html = ""
